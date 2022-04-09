@@ -1,4 +1,7 @@
 import random
+from main import db
+from keyboards.markup import keyboard
+from aiogram import types
 
 
 class Card(object):
@@ -44,9 +47,6 @@ class Player(object):
 
 
 class Dealer(Player):
-    # def get_cards(self, cards: DeskCard):
-    #     while self.count < 18:
-    #         self.hand = cards.get_card()
     def get_cards(self, cards: DeskCard):
         while self.count < 21:
             _card = cards.get_card()
@@ -65,41 +65,41 @@ class Game(object):
     def print(self) -> str:
         return '\n{}:\n{}\n{}:\n{}'.format(self.player.name, self.player.hand, self.dealer.name, self.dealer.hand)
 
-    def check_count(self):
+    async def check_count(self, message: types.Message):
         if self.player.count > 21:
-            print('\nYou Loose', self.print())
+            db.update_balance_minus(message.from_user.id)
+            db.add_story(message.from_user.id, 'You Loose')
+            await message.answer(text='\nYou Loose {}'.format(self.print()), reply_markup=keyboard)
         elif self.dealer.count > 21 and self.player.count <= 21:
-            print('\nYou Win', self.print())
+            db.update_balance_add(message.from_user.id)
+            db.add_story(message.from_user.id, 'You Win')
+            await message.answer(text='\nYou Win {}'.format(self.print()), reply_markup=keyboard)
         elif self.dealer.count == self.player.count:
-            print('\nDead Heat', self.print())
+            db.update_balance_add(message.from_user.id)
+            db.add_story(message.from_user.id, 'Dead Head')
+            await message.answer(text='\nDead Head {}'.format(self.print()), reply_markup=keyboard)
         elif self.dealer.count > self.player.count:
-            print('\nYou Loose', self.print())
+            db.update_balance_minus(message.from_user.id)
+            db.add_story(message.from_user.id, 'You Loose')
+            await message.answer(text='\nYou Loose {}'.format(self.print()), reply_markup=keyboard)
         elif self.dealer.count < self.player.count:
-            print('\nYou Win', self.print())
+            db.update_balance_add(message.from_user.id)
+            db.add_story(message.from_user.id, 'You Win')
+            await message.answer(text='\nYou Win {}'.format(self.print()), reply_markup=keyboard)
 
-    def start(self):
+    async def start(self, message: types.Message):
         self.player.hand = self.cards.get_card()
         self.player.hand = self.cards.get_card()
-        print(self.player.hand)
-
+        await message.answer(text=self.player.hand)
         self.dealer.hand = self.cards.get_card()
         self.dealer.hand = self.cards.get_card()
         while self.player.count < 21:
             answer = input('Карту? y/n ')
             if answer == 'y':
                 self.player.hand = self.cards.get_card()
-                print(self.player.hand)
+                await message.answer(text=self.player.hand)
             elif answer == 'n':
                 self.dealer.get_cards(self.cards)
                 break
-        self.check_count()
+        await self.check_count(message)
 
-
-def main() -> None:
-    name = input('Введите Ваше имя: ')
-    game = Game(player_name=name)
-    game.start()
-
-
-if __name__ == '__main__':
-    main()
